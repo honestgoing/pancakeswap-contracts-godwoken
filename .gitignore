@@ -1,0 +1,12 @@
+# Packages
+node_modules/
+
+# Hardhat build outputs
+artifacts/
+cache/
+
+.openzeppelin
+
+deploy*.json
+
+.env.dev
