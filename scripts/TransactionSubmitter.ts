@@ -18,14 +18,25 @@ function jsonRevive(_key: string, val: { type: string; hex: string }): any {
 }
 
 export class TransactionSubmitter {
-  static async newWithHistory(filePath: string): Promise<TransactionSubmitter> {
+  static async newWithHistory(
+    filePath: string,
+    replaceExistFile = false,
+  ): Promise<TransactionSubmitter> {
     let receipts: TXReceipts = {};
 
     console.log(`Running: Load transaction history ${filePath}`);
     try {
       const jsonData = await readFile(filePath, "utf8");
       receipts = JSON.parse(jsonData, jsonRevive) as TXReceipts;
-      console.log("    Loaded");
+
+      if (replaceExistFile) {
+        console.log(
+          "    Ignoring exist history, history file will be replaced",
+        );
+        receipts = {};
+      } else {
+        console.log("    Loaded");
+      }
     } catch (err) {
       if (err.code === "ENOENT") {
         console.log(`    New file created`);

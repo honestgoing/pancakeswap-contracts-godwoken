@@ -21,6 +21,9 @@ yarn ts-node ./scripts/deploy.ts
 
 # devnet
 ENV_PATH=./.env.dev yarn ts-node ./scripts/deploy.ts
+
+# use IGNORE_HISTORY to force re-run
+IGNORE_HISTORY=true ENV_PATH=./.env.dev yarn ts-node ./scripts/deploy.ts
 ```
 
 ## Devnet Debugging

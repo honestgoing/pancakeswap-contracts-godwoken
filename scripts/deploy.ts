@@ -6,6 +6,7 @@ import {
   Contract,
   ContractFactory,
   Overrides,
+  PayableOverrides,
   providers,
   utils,
 } from "ethers";
@@ -83,7 +84,9 @@ interface IFaucet extends Contract {
   ): Promise<TransactionResponse>;
 }
 
-interface IPancakeRouterStaticMethods extends TCallStatic {}
+interface IPancakeRouterStaticMethods extends TCallStatic {
+  WETH(): Promise<string>;
+}
 
 interface IPancakeRouter extends Contract, IPancakeRouterStaticMethods {
   callStatic: IPancakeRouterStaticMethods;
@@ -105,7 +108,7 @@ interface IPancakeRouter extends Contract, IPancakeRouterStaticMethods {
     amountETHMin: BigNumberish,
     to: string,
     deadline: number,
-    overrides?: Overrides,
+    overrides?: PayableOverrides,
   ): Promise<TransactionResponse>;
   removeLiquidity(
     tokenA: string,
@@ -155,6 +158,13 @@ const txOverrides = {
   gasLimit: isGodwoken ? 1_000_000 : undefined,
 };
 
+const ethSymbol = isGodwoken
+  ? "CKB"
+  : networkSuffix?.startsWith("bsc")
+  ? "BNB"
+  : "ETH";
+const ethDecimals = isGodwoken ? 8 : 18;
+
 async function main() {
   console.log("Deployer address", deployerAddress);
 
@@ -169,6 +179,7 @@ async function main() {
 
   const transactionSubmitter = await TransactionSubmitter.newWithHistory(
     `deploy${networkSuffix ? `-${networkSuffix}` : ""}.json`,
+    Boolean(process.env.IGNORE_HISTORY),
   );
 
   const deployPancakeFactoryReceipt = await transactionSubmitter.submitAndWait(
@@ -345,7 +356,7 @@ async function main() {
         },
       ),
     ]);
-  } catch (err) {
+  } catch (err: any) {
     console.log("    Failed:", err.message ?? err);
     console.log(`Trying: Add 1000 ${pairSymbol} liquidity step-by-step`);
     await transactionSubmitter.submitAndWait(
@@ -407,7 +418,7 @@ async function main() {
         offChainCalculatedPairAddress,
       );
   }
-  console.log("    off-chain calculation:", offChainCalculatedPairAddress);
+  console.log("    Off-chain calculation:", offChainCalculatedPairAddress);
 
   const pair = new Contract(
     pairAddress,
@@ -433,7 +444,70 @@ async function main() {
       .toNumber() / 1e9,
   );
 
-  // TODO: addLiquidityETH
+  const [tokenCAddress, tokenDAddress, ethPairSymbol] =
+    tokenAddresses[0].toLowerCase() < wethAddress.toLowerCase()
+      ? [tokenAddresses[0], wethAddress, `${tokenSymbols[0]}-${ethSymbol}`]
+      : [wethAddress, tokenAddresses[0], `${ethSymbol}-${tokenSymbols[0]}`];
+
+  const oneETH = BigNumber.from(10).pow(ethDecimals).mul(1).toString();
+  await transactionSubmitter.submitAndWait(
+    `Add 1 ${ethPairSymbol} liquidity`,
+    () => {
+      return pancakeRouter.addLiquidityETH(
+        tokenAddresses[0],
+        unit(1),
+        unit(1),
+        oneETH,
+        deployerRecipientAddress,
+        Math.ceil(Date.now() / 1000) + 60 * 20,
+        {
+          ...txOverrides,
+          value: oneETH,
+        },
+      );
+    },
+  );
+
+  const ethPairAddress = await pancakeFactory.callStatic.getPair(
+    tokenCAddress,
+    tokenDAddress,
+  );
+  console.log(`${ethPairSymbol} pair address:`, ethPairAddress);
+
+  const ethIndex = tokenCAddress === wethAddress ? 0 : 1;
+  const ethPair = new Contract(
+    ethPairAddress,
+    PancakePair.abi,
+    deployer,
+  ) as IPancakePair;
+  console.log(
+    `${ethPairSymbol} reserves:`,
+    (
+      (await ethPair.callStatic.getReserves()).slice(0, 2) as [
+        BigNumber,
+        BigNumber,
+      ]
+    )
+      .map(
+        (bn, i) =>
+          bn
+            .div(
+              i === ethIndex
+                ? BigNumber.from(10).pow(ethDecimals).div(1e4)
+                : constants.WeiPerEther.div(1e9),
+            )
+            .toNumber() / (i === ethIndex ? 1e4 : 1e9),
+      )
+      .join(", "),
+  );
+
+  console.log(
+    `${ethPairSymbol} balance:`,
+    (await ethPair.callStatic.balanceOf(deployerRecipientAddress))
+      .div(constants.WeiPerEther.div(1e9))
+      .toNumber() / 1e9,
+  );
+
   // TODO: swap
 
   async function deployToken(name: string, symbol: string) {
