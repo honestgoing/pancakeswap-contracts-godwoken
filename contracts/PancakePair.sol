@@ -113,11 +113,13 @@ contract PancakePair is IPancakePair, PancakeERC20 {
         uint balance1 = IERC20(token1).balanceOf(address(this));
         uint amount0 = balance0.sub(_reserve0);
         uint amount1 = balance1.sub(_reserve1);
+        uint normalizedAmount0 = amount0.mul(uint(10) ** (18 - IERC20(token0).decimals()));
+        uint normalizedAmount1 = amount1.mul(uint(10) ** (18 - IERC20(token1).decimals()));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
-            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+            liquidity = Math.sqrt(normalizedAmount0.mul(normalizedAmount1)).sub(MINIMUM_LIQUIDITY);
            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
             liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
