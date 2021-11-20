@@ -22,11 +22,11 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "@ckb-lumos/base": "^0.16.0",
+    "@ckb-lumos/base": "^0.18.0-rc1",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.2.0",
-    "@polyjuice-provider/ethers": "^0.0.1-rc5",
+    "@polyjuice-provider/ethers": "0.1.0",
     "@uniswap/lib": "1.1.1",
     "axios": "^0.21.1",
     "dotenv": "^10.0.0",
