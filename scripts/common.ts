@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
+import { PolyjuiceConfig } from "@polyjuice-provider/base";
 import {
   PolyjuiceWallet,
-  PolyjuiceConfig,
   PolyjuiceJsonRpcProvider,
 } from "@polyjuice-provider/ethers";
 import dotenv from "dotenv";
@@ -97,7 +97,7 @@ export function ethEoaAddressToGodwokenShortAddress(
   }
 
   const layer2Lock: Script = {
-    code_hash: polyjuiceConfig.ethAccountLockCodeHash,
+    code_hash: polyjuiceConfig.ethAccountLockCodeHash!,
     hash_type: "type",
     args: polyjuiceConfig.rollupTypeHash + ethAddress.slice(2).toLowerCase(),
   };
